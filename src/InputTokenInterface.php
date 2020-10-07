@@ -10,6 +10,7 @@ namespace Leadvertex\Plugin\Components\Token;
 
 use Lcobucci\JWT\Token;
 use Leadvertex\Plugin\Components\Registration\Registration;
+use Leadvertex\Plugin\Components\Settings\Settings;
 
 interface InputTokenInterface
 {
@@ -23,6 +24,8 @@ interface InputTokenInterface
     public function getBackendUri(): string;
 
     public function getRegistration(): Registration;
+
+    public function getSettings(): Settings;
 
     public function getInputToken(): Token;
 

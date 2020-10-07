@@ -13,6 +13,7 @@ use Lcobucci\JWT\Signer\Hmac\Sha512;
 use Lcobucci\JWT\Token;
 use Lcobucci\JWT\ValidationData;
 use Leadvertex\Plugin\Components\Registration\Registration;
+use Leadvertex\Plugin\Components\Settings\Settings;
 
 class InputToken implements InputTokenInterface
 {
@@ -25,6 +26,9 @@ class InputToken implements InputTokenInterface
 
     /** @var Registration */
     private $registration;
+
+    /** @var Settings */
+    private $settings;
 
     public function __construct(string $token)
     {
@@ -66,6 +70,18 @@ class InputToken implements InputTokenInterface
     public function getRegistration(): Registration
     {
         return $this->registration;
+    }
+
+    public function getSettings(): Settings
+    {
+        if (is_null($this->settings)) {
+            $registration = $this->getRegistration();
+            $this->settings = Settings::findById($registration->getId(), $registration->getFeature());
+            if (is_null($this->settings)) {
+                $this->settings = new Settings($registration->getId(), $registration->getFeature());
+            }
+        }
+        return $this->settings;
     }
 
     private function parseInputToken(string $token): Token
