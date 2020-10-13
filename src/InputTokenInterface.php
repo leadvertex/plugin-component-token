@@ -31,4 +31,6 @@ interface InputTokenInterface
 
     public function getOutputToken(): Token;
 
+    public static function getInstance(): ?InputTokenInterface;
+
 }

@@ -14,8 +14,9 @@ use Lcobucci\JWT\Token;
 use Lcobucci\JWT\ValidationData;
 use Leadvertex\Plugin\Components\Registration\Registration;
 use Leadvertex\Plugin\Components\Settings\Settings;
+use RuntimeException;
 
-abstract class GraphQLToken implements InputTokenInterface
+class GraphqlInputToken implements InputTokenInterface
 {
 
     /** @var Token */
@@ -30,11 +31,20 @@ abstract class GraphQLToken implements InputTokenInterface
     /** @var Settings */
     private $settings;
 
+    /** @var GraphqlInputToken */
+    private static $instance = null;
+
     public function __construct(string $token)
     {
+        if (is_null(self::$instance)) {
+            throw new RuntimeException('Some token already loaded');
+        }
+
         $this->inputToken = $this->parseInputToken($token);
         $this->registration = $this->findRegistration($this->inputToken);
         $this->pluginToken = $this->parsePluginToken($this->inputToken, $this->registration);
+
+        self::$instance = $this;
     }
 
     public function getInputToken(): Token
@@ -132,5 +142,10 @@ abstract class GraphQLToken implements InputTokenInterface
         }
 
         return $token;
+    }
+
+    public static function getInstance(): ?InputTokenInterface
+    {
+        return self::$instance;
     }
 }
