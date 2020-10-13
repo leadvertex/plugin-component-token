@@ -15,7 +15,7 @@ use Lcobucci\JWT\ValidationData;
 use Leadvertex\Plugin\Components\Registration\Registration;
 use Leadvertex\Plugin\Components\Settings\Settings;
 
-class InputToken implements InputTokenInterface
+abstract class GraphQLToken implements InputTokenInterface
 {
 
     /** @var Token */
