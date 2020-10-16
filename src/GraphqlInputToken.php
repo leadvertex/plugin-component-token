@@ -36,7 +36,7 @@ class GraphqlInputToken implements InputTokenInterface
 
     public function __construct(string $token)
     {
-        if (is_null(self::$instance)) {
+        if (!is_null(self::$instance)) {
             throw new RuntimeException('Some token already loaded');
         }
 
