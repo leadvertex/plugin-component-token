@@ -40,9 +40,12 @@ class GraphqlInputToken implements InputTokenInterface
             throw new RuntimeException('Some token already loaded');
         }
 
-        $this->inputToken = $this->parseInputToken($token);
-        $this->registration = $this->findRegistration($this->inputToken);
-        $this->pluginToken = $this->parsePluginToken($this->inputToken, $this->registration);
+        $this->inputToken = (new Parser())->parse($token);
+        $validation = new ValidationData();
+        $validation->setAudience($_ENV['LV_PLUGIN_SELF_URI']);
+        if (!$this->inputToken->validate($validation)) {
+            throw new TokenException('Invalid backend token', 101);
+        }
 
         self::$instance = $this;
     }
@@ -54,31 +57,62 @@ class GraphqlInputToken implements InputTokenInterface
 
     public function getId(): string
     {
-        return $this->inputToken->getClaim('jti');
+        return $this->getInputToken()->getClaim('jti');
     }
 
     public function getCompanyId(): string
     {
-        return $this->inputToken->getClaim('cid');
+        return $this->getInputToken()->getClaim('cid');
     }
 
     public function getBackendUri(): string
     {
-        return $this->inputToken->getClaim('iss');
+        return $this->getInputToken()->getClaim('iss');
     }
 
     public function getOutputToken(): Token
     {
-        return $this->registration->getSignedToken((string) $this->inputToken);
+        return $this->getRegistration()->getSignedToken((string) $this->getInputToken());
     }
 
     public function getPluginToken(): Token
     {
+        if (!isset($this->pluginToken)) {
+            $this->pluginToken = (new Parser())->parse(
+                $this->inputToken->getClaim('plugin-jwt')
+            );
+
+            $validation = new ValidationData();
+            $validation->setAudience($_ENV['LV_PLUGIN_SELF_URI']);
+            if (!$this->pluginToken->validate($validation)) {
+                throw new TokenException('Invalid plugin token', 300);
+            }
+
+            if (!$this->pluginToken->verify(new Sha512(), $this->getRegistration()->getLVPT())) {
+                throw new TokenException('Invalid plugin token sign', 301);
+            }
+
+            if ($this->pluginToken->getClaim('jti') !== $this->getInputToken()->getClaim('jti')) {
+                throw new TokenException("Mismatch 'jti' of plugin and parent tokens", 302);
+            }
+        }
+
         return $this->pluginToken;
     }
 
     public function getRegistration(): Registration
     {
+        if (!isset($this->registration)) {
+
+            $this->registration = Registration::findById(
+                $this->getInputToken()->getClaim('plugin')->id,
+                $this->getInputToken()->getClaim('plugin')->alias
+            );
+
+            if (is_null($this->registration)) {
+                throw new TokenException('Plugin was not registered', 200);
+            }
+        }
         return $this->registration;
     }
 
@@ -92,56 +126,6 @@ class GraphqlInputToken implements InputTokenInterface
             }
         }
         return $this->settings;
-    }
-
-    private function parseInputToken(string $token): Token
-    {
-        $token = (new Parser())->parse($token);
-
-        $validation = new ValidationData();
-        $validation->setAudience($_ENV['LV_PLUGIN_SELF_URI']);
-        if (!$token->validate($validation)) {
-            throw new TokenException('Invalid backend token', 101);
-        }
-
-        return $token;
-    }
-
-    private function findRegistration(Token $token): Registration
-    {
-        $registration = Registration::findById(
-            $token->getClaim('plugin')->id,
-            $token->getClaim('plugin')->alias
-        );
-
-        if (is_null($registration)) {
-            throw new TokenException('Plugin was not registered', 200);
-        }
-
-        return $registration;
-    }
-
-    private function parsePluginToken(Token $inputToken, Registration $registration): Token
-    {
-        $token = (new Parser())->parse(
-            $inputToken->getClaim('plugin-jwt')
-        );
-
-        $validation = new ValidationData();
-        $validation->setAudience($_ENV['LV_PLUGIN_SELF_URI']);
-        if (!$token->validate($validation)) {
-            throw new TokenException('Invalid plugin token', 300);
-        }
-
-        if (!$token->verify(new Sha512(), $registration->getLVPT())) {
-            throw new TokenException('Invalid plugin token sign', 301);
-        }
-
-        if ($token->getClaim('jti') !== $inputToken->getClaim('jti')) {
-            throw new TokenException("Mismatch 'jti' of plugin and parent tokens", 302);
-        }
-
-        return $token;
     }
 
     public static function getInstance(): ?InputTokenInterface
