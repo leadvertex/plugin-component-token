@@ -84,7 +84,7 @@ class GraphqlInputToken implements InputTokenInterface
 
             $validation = new ValidationData();
             $validation->setAudience($_ENV['LV_PLUGIN_SELF_URI']);
-            if (!$this->pluginToken->validate($validation)) {
+            if (!$this->pluginToken->hasClaim('aud') || !$this->pluginToken->validate($validation)) {
                 throw new TokenException('Invalid plugin token', 300);
             }
 
