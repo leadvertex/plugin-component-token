@@ -13,7 +13,6 @@ use Lcobucci\JWT\Signer\Hmac\Sha512;
 use Lcobucci\JWT\Token;
 use Lcobucci\JWT\ValidationData;
 use Leadvertex\Plugin\Components\Registration\Registration;
-use Leadvertex\Plugin\Components\Settings\Settings;
 use RuntimeException;
 
 class GraphqlInputToken implements InputTokenInterface
@@ -27,9 +26,6 @@ class GraphqlInputToken implements InputTokenInterface
 
     /** @var Registration */
     private $registration;
-
-    /** @var Settings */
-    private $settings;
 
     /** @var GraphqlInputToken */
     private static $instance = null;
@@ -114,18 +110,6 @@ class GraphqlInputToken implements InputTokenInterface
             }
         }
         return $this->registration;
-    }
-
-    public function getSettings(): Settings
-    {
-        if (is_null($this->settings)) {
-            $registration = $this->getRegistration();
-            $this->settings = Settings::findById($registration->getId(), $registration->getFeature());
-            if (is_null($this->settings)) {
-                $this->settings = new Settings($registration->getId(), $registration->getFeature());
-            }
-        }
-        return $this->settings;
     }
 
     public static function getInstance(): ?InputTokenInterface
