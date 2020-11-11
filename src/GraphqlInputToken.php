@@ -8,8 +8,10 @@
 namespace Leadvertex\Plugin\Components\Token;
 
 
+use Lcobucci\JWT\Builder;
 use Lcobucci\JWT\Parser;
 use Lcobucci\JWT\Signer\Hmac\Sha512;
+use Lcobucci\JWT\Signer\Key;
 use Lcobucci\JWT\Token;
 use Lcobucci\JWT\ValidationData;
 use Leadvertex\Plugin\Components\Registration\Registration;
@@ -30,6 +32,11 @@ class GraphqlInputToken implements InputTokenInterface
     /** @var GraphqlInputToken */
     private static $instance = null;
 
+    /**
+     * GraphqlInputToken constructor.
+     * @param string $token
+     * @throws TokenException
+     */
     public function __construct(string $token)
     {
         if (!is_null(self::$instance)) {
@@ -66,11 +73,23 @@ class GraphqlInputToken implements InputTokenInterface
         return $this->getInputToken()->getClaim('iss');
     }
 
+    /**
+     * @return Token
+     * @throws TokenException
+     */
     public function getOutputToken(): Token
     {
-        return $this->getRegistration()->getSignedToken((string) $this->getInputToken());
+        return (new Builder())
+            ->issuedBy($_ENV['LV_PLUGIN_SELF_URI'])
+            ->withClaim('jwt', (string) $this->getInputToken())
+            ->withClaim('plugin', $_ENV['LV_PLUGIN_SELF_TYPE'])
+            ->getToken(new Sha512(), new Key($this->getRegistration()->getLVPT()));
     }
 
+    /**
+     * @return Token
+     * @throws TokenException
+     */
     public function getPluginToken(): Token
     {
         if (!isset($this->pluginToken)) {
@@ -96,6 +115,10 @@ class GraphqlInputToken implements InputTokenInterface
         return $this->pluginToken;
     }
 
+    /**
+     * @return Registration
+     * @throws TokenException
+     */
     public function getRegistration(): Registration
     {
         if (!isset($this->registration)) {
